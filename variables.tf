@@ -2,7 +2,7 @@
 variable "vpc_cidr_block" {
   description = "The CIDR block for the association."
   type        = string
-  default     = "192.168.0.0/24"
+  default     = "10.0.0.0/16"
 }
 
 variable "vpc_enable_dns_hostnames" {
@@ -24,10 +24,28 @@ variable "vpc_instance_tenancy" {
 }
 
 # Variables for elastic beanstalk Subnet
-variable "subnet_availability_zone" {
-  description = "AWS availability zone"
+variable "subnet_a_availability_zone" {
+  description = "AZ for the subnet."
   type        = string
   default     = "us-east-1a"
+}
+
+variable "subnet_a_cidr_block" {
+  description = "The IPv4 CIDR block for the subnet."
+  type        = string
+  default     = "10.0.0.0/20"
+}
+
+variable "subnet_b_availability_zone" {
+  description = "AZ for the subnet."
+  type        = string
+  default     = "us-east-1b"
+}
+
+variable "subnet_b_cidr_block" {
+  description = "The IPv4 CIDR block for the subnet."
+  type        = string
+  default     = "10.0.16.0/20"
 }
 
 # Variables for elastic beanstalk Application
@@ -135,7 +153,25 @@ variable "default_listener_enabled" {
 variable "environment_loadbalancer_type" {
   description = "Load Balancer type, e.g. 'application' or 'classic'."
   type        = string
-  default     = "network"
+  default     = "classic"
+}
+
+variable "environment_loadbalancer_security_groups" {
+  description = "Load balancer security groups"
+  type        = list(string)
+  default     = []
+}
+
+variable "environment_loadbalancer_managed_security_group" {
+  description = "Load balancer managed security group"
+  type        = string
+  default     = ""
+}
+
+variable "environment_loadbalancer_ssl_certificate_id" {
+  type        = string
+  default     = ""
+  description = "Load Balancer SSL certificate ARN. The certificate must be present in AWS Certificate Manager"
 }
 
 # aws:elasticbeanstalk:environment:process:default
@@ -161,6 +197,63 @@ variable "environment_process_default_unhealthy_threshold_count" {
   description = "The number of consecutive unsuccessful requests before Elastic Load Balancing changes the instance health status."
   type        = number
   default     = 3
+}
+
+# aws:autoscaling:updatepolicy:rollingupdate
+variable "autoscaling_updatepolicy_rolling_update_enabled" {
+  description = "Whether to enable rolling update."
+  type        = bool
+  default     = true
+}
+
+variable "autoscaling_updatepolicy_rolling_update_type" {
+  description = "`Health` or `Immutable`. Set it to `Immutable` to apply the configuration change to a fresh group of instances."
+  type        = string
+  default     = "Immutable"
+}
+
+variable "autoscaling_updatepolicy_min_instance_in_service" {
+  description = "Minimum number of instances in service during update."
+  type        = number
+  default     = 1
+}
+
+variable "application_healthcheck_url" {
+  description = "The path where health check requests are sent to."
+  type        = string
+  default     = "/"
+}
+
+variable "environment_listener_ssl_policy" {
+  description = "Specify a security policy to apply to the listener. This option is only applicable to environments with an application load balancer."
+  type        = string
+  default     = ""
+}
+
+variable "default_matcher_http_code" {
+  description = "List of HTTP codes that indicate that an instance is healthy. Note that this option is only applicable to environments with a network or application load balancer."
+  type        = list(string)
+  default     = ["200"]
+}
+
+variable "default_health_check_timeout" {
+  description = "The amount of time, in seconds, to wait for a response during a health check. Note that this option is only applicable to environments with an application load balancer"
+  type        = number
+  default     = 5
+}
+
+# aws:elasticbeanstalk:command
+variable "command_deployment_policy" {
+  description = "Use the DeploymentPolicy option to set the deployment type. The following values are supported: `AllAtOnce`, `Rolling`, `RollingWithAdditionalBatch`, `Immutable`, `TrafficSplitting`."
+  type        = string
+  default     = "Rolling"
+}
+
+# aws:autoscaling:updatepolicy:rollingupdate
+variable "updatepolicy_max_batch_size" {
+  description = "Maximum number of instances to update at once."
+  type        = number
+  default     = 1
 }
 
 # aws:elasticbeanstalk:healthreporting:system
@@ -192,6 +285,12 @@ variable "managedactions_platformupdate_update_level" {
 
 variable "managedactions_platformupdate_instance_refresh_enabled" {
   description = "Enable weekly instance replacement."
+  type        = bool
+  default     = true
+}
+
+variable "command_ignore_health_check" {
+  description = "Do not cancel a deployment due to failed health checks"
   type        = bool
   default     = true
 }

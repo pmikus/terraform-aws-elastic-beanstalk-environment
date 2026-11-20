@@ -3,6 +3,118 @@ locals {
     "Name"        = "${var.application_name}"
     "Environment" = "${var.application_name}"
   }
+
+  # Settings for all loadbalancer types
+  generic_elb_settings = [
+    {
+      namespace = "aws:elasticbeanstalk:environment"
+      name      = "LoadBalancerType"
+      value     = var.environment_loadbalancer_type
+    }
+  ]
+
+  elb_settings = [
+    {
+      namespace = "aws:ec2:vpc"
+      name      = "ELBSubnets"
+      value     = join(",", [aws_subnet.subnet_a.id, aws_subnet.subnet_b.id])
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "Port"
+      value     = var.environment_process_default_port
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "Protocol"
+      value     = var.environment_loadbalancer_type == "network" ? "TCP" : "HTTP"
+    },
+    {
+      namespace = "aws:ec2:vpc"
+      name      = "ELBScheme"
+      value     = var.environment_type == "LoadBalanced" ? var.elb_scheme : ""
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "HealthCheckInterval"
+      value     = var.environment_process_default_healthcheck_interval
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "HealthyThresholdCount"
+      value     = var.environment_process_default_healthy_threshold_count
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "UnhealthyThresholdCount"
+      value     = var.environment_process_default_unhealthy_threshold_count
+    }
+  ]
+
+  generic_alb_settings = [
+    {
+      namespace = "aws:elbv2:loadbalancer"
+      name      = "SecurityGroups"
+      value     = join(",", sort(var.environment_loadbalancer_security_groups))
+    }
+  ]
+
+  alb_settings = [
+    {
+      namespace = "aws:elbv2:listener:default"
+      name      = "ListenerEnabled"
+      value     = var.default_listener_enabled || var.environment_loadbalancer_ssl_certificate_id == "" ? "true" : "false"
+    },
+    {
+      namespace = "aws:elbv2:loadbalancer"
+      name      = "ManagedSecurityGroup"
+      value     = var.environment_loadbalancer_managed_security_group
+    },
+    {
+      namespace = "aws:elbv2:listener:443"
+      name      = "ListenerEnabled"
+      value     = var.environment_loadbalancer_ssl_certificate_id == "" ? "false" : "true"
+    },
+    {
+      namespace = "aws:elbv2:listener:443"
+      name      = "Protocol"
+      value     = "HTTPS"
+    },
+    {
+      namespace = "aws:elbv2:listener:443"
+      name      = "SSLCertificateArns"
+      value     = var.environment_loadbalancer_ssl_certificate_id
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "HealthCheckPath"
+      value     = var.application_healthcheck_url
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "MatcherHTTPCode"
+      value     = join(",", sort(var.default_matcher_http_code))
+    },
+    {
+      namespace = "aws:elasticbeanstalk:environment:process:default"
+      name      = "HealthCheckTimeout"
+      value     = var.default_health_check_timeout
+    }
+  ]
+
+  nlb_settings = [
+    {
+      namespace = "aws:elbv2:listener:default"
+      name      = "ListenerEnabled"
+      value     = var.default_listener_enabled
+    }
+  ]
+
+  settings_nlb = var.environment_loadbalancer_type == "network" ? concat(local.nlb_settings, local.generic_elb_settings, local.elb_settings) : []
+  settings_alb = var.environment_loadbalancer_type == "application" ? concat(local.generic_alb_settings, local.alb_settings, local.generic_elb_settings, local.elb_settings) : []
+
+  # Full set of LoadBlanacer settings.
+  elb = var.environment_tier == "WebServer" ? concat(local.settings_nlb, local.settings_alb) : []
 }
 
 # Create elastic beanstalk VPC
@@ -16,14 +128,27 @@ resource "aws_vpc" "vpc" {
 }
 
 # Create elastic beanstalk Subnets
-resource "aws_subnet" "subnet" {
+resource "aws_subnet" "subnet_a" {
   depends_on = [
     aws_vpc.vpc
   ]
-  availability_zone               = var.subnet_availability_zone
+  availability_zone               = var.subnet_a_availability_zone
   assign_ipv6_address_on_creation = true
-  cidr_block                      = aws_vpc.vpc.cidr_block
+  cidr_block                      = var.subnet_a_cidr_block
   ipv6_cidr_block                 = cidrsubnet(aws_vpc.vpc.ipv6_cidr_block, 8, 1)
+  map_public_ip_on_launch         = true
+  vpc_id                          = aws_vpc.vpc.id
+  tags                            = local.tags
+}
+
+resource "aws_subnet" "subnet_b" {
+  depends_on = [
+    aws_vpc.vpc
+  ]
+  availability_zone               = var.subnet_b_availability_zone
+  assign_ipv6_address_on_creation = true
+  cidr_block                      = var.subnet_b_cidr_block
+  ipv6_cidr_block                 = cidrsubnet(aws_vpc.vpc.ipv6_cidr_block, 8, 2)
   map_public_ip_on_launch         = true
   vpc_id                          = aws_vpc.vpc.id
   tags                            = local.tags
@@ -308,7 +433,8 @@ resource "aws_iam_role_policy" "default" {
 resource "aws_elastic_beanstalk_environment" "environment" {
   depends_on = [
     aws_vpc.vpc,
-    aws_subnet.subnet,
+    aws_subnet.subnet_a,
+    aws_subnet.subnet_b,
     aws_ssm_activation.ec2
   ]
   application            = var.environment_application
@@ -337,19 +463,7 @@ resource "aws_elastic_beanstalk_environment" "environment" {
   setting {
     namespace = "aws:ec2:vpc"
     name      = "Subnets"
-    value     = aws_subnet.subnet.id
-  }
-
-  setting {
-    namespace = "aws:ec2:vpc"
-    name      = "ELBSubnets"
-    value     = aws_subnet.subnet.id
-  }
-
-  setting {
-    namespace = "aws:ec2:vpc"
-    name      = "ELBScheme"
-    value     = var.environment_type == "LoadBalanced" ? var.elb_scheme : ""
+    value     = join(",", [aws_subnet.subnet_a.id, aws_subnet.subnet_b.id])
   }
 
   setting {
@@ -359,60 +473,9 @@ resource "aws_elastic_beanstalk_environment" "environment" {
   }
 
   setting {
-    namespace = "aws:elasticbeanstalk:application"
-    name      = "Application Healthcheck URL"
-    value     = "/"
-  }
-
-  # aws:elbv2:listener:default
-  setting {
-    namespace = "aws:elbv2:listener:default"
-    name      = "ListenerEnabled"
-    value     = var.default_listener_enabled
-  }
-
-  # aws:elasticbeanstalk:environment
-  setting {
-    namespace = "aws:elasticbeanstalk:environment"
-    name      = "LoadBalancerType"
-    value     = var.environment_loadbalancer_type
-  }
-
-  setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
     value     = aws_iam_role.service.name
-  }
-
-  # aws:elasticbeanstalk:environment:process:default
-  setting {
-    namespace = "aws:elasticbeanstalk:environment:process:default"
-    name      = "HealthCheckInterval"
-    value     = var.environment_process_default_healthcheck_interval
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:environment:process:default"
-    name      = "HealthyThresholdCount"
-    value     = var.environment_process_default_healthy_threshold_count
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:environment:process:default"
-    name      = "Port"
-    value     = var.environment_process_default_port
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:environment:process:default"
-    name      = "Protocol"
-    value     = var.environment_loadbalancer_type == "network" ? "TCP" : "HTTP"
-  }
-
-  setting {
-    namespace = "aws:elasticbeanstalk:environment:process:default"
-    name      = "UnhealthyThresholdCount"
-    value     = var.environment_process_default_unhealthy_threshold_count
   }
 
   # aws:autoscaling:launchconfiguration
@@ -420,6 +483,60 @@ resource "aws_elastic_beanstalk_environment" "environment" {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
     value     = aws_iam_instance_profile.ec2_iam_instance_profile.name
+  }
+
+  setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "DisableIMDSv1"
+    value     = true
+  }
+
+  dynamic "setting" {
+    for_each = local.elb
+    content {
+      namespace = setting.value["namespace"]
+      name      = setting.value["name"]
+      value     = setting.value["value"]
+    }
+  }
+
+  # aws:autoscaling:updatepolicy:rollingupdate
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name      = "RollingUpdateEnabled"
+    value     = var.autoscaling_updatepolicy_rolling_update_enabled
+  }
+
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name      = "RollingUpdateType"
+    value     = var.autoscaling_updatepolicy_rolling_update_type
+  }
+
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name      = "MinInstancesInService"
+    value     = var.autoscaling_updatepolicy_min_instance_in_service
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application"
+    name      = "Application Healthcheck URL"
+    value     = var.application_healthcheck_url
+  }
+
+  # aws:elasticbeanstalk:command
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "DeploymentPolicy"
+    value     = var.command_deployment_policy
+  }
+
+  # aws:autoscaling:updatepolicy:rollingupdate
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name      = "MaxBatchSize"
+    value     = var.updatepolicy_max_batch_size
   }
 
   # aws:elasticbeanstalk:healthreporting:system
@@ -453,6 +570,12 @@ resource "aws_elastic_beanstalk_environment" "environment" {
     namespace = "aws:elasticbeanstalk:managedactions:platformupdate"
     name      = "InstanceRefreshEnabled"
     value     = var.managedactions_platformupdate_instance_refresh_enabled
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "IgnoreHealthCheck"
+    value     = var.command_ignore_health_check
   }
 
   # aws:autoscaling:asg

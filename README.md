@@ -2,16 +2,16 @@
 ## Requirements
 
 | Name | Version |
-|------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.1.4 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 4.3.0 |
+| ---- | ------- |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.4 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.7.0 |
 | <a name="requirement_vault"></a> [vault](#requirement\_vault) | >= 3.2.1 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 4.3.0 |
+| ---- | ------- |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.7.0 |
 
 ## Modules
 
@@ -20,7 +20,7 @@ No modules.
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [aws_elastic_beanstalk_environment.environment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/elastic_beanstalk_environment) | resource |
 | [aws_iam_instance_profile.ec2_iam_instance_profile](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
 | [aws_iam_role.ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
@@ -37,7 +37,8 @@ No modules.
 | [aws_internet_gateway.internet_gateway](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/internet_gateway) | resource |
 | [aws_route.route](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_ssm_activation.ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_activation) | resource |
-| [aws_subnet.subnet](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
+| [aws_subnet.subnet_a](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
+| [aws_subnet.subnet_b](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
 | [aws_vpc.vpc](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc) | resource |
 | [aws_iam_policy_document.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
@@ -46,8 +47,9 @@ No modules.
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_application_description"></a> [application\_description](#input\_application\_description) | Short description of the application. | `string` | `"Beanstalk Application"` | no |
+| <a name="input_application_healthcheck_url"></a> [application\_healthcheck\_url](#input\_application\_healthcheck\_url) | The path where health check requests are sent to. | `string` | `"/"` | no |
 | <a name="input_application_name"></a> [application\_name](#input\_application\_name) | The name of the application, must be unique within account. | `string` | `"Beanstalk"` | no |
 | <a name="input_appversion_lifecycle_delete_source_from_s3"></a> [appversion\_lifecycle\_delete\_source\_from\_s3](#input\_appversion\_lifecycle\_delete\_source\_from\_s3) | Whether to delete application versions from S3 source | `bool` | `false` | no |
 | <a name="input_appversion_lifecycle_max_count"></a> [appversion\_lifecycle\_max\_count](#input\_appversion\_lifecycle\_max\_count) | The max number of application versions to keep | `number` | `2` | no |
@@ -62,17 +64,28 @@ No modules.
 | <a name="input_autoscaling_trigger_unit"></a> [autoscaling\_trigger\_unit](#input\_autoscaling\_trigger\_unit) | Unit for the trigger measurement, such as Bytes | `string` | `"Percent"` | no |
 | <a name="input_autoscaling_trigger_upper_breach_scale_increment"></a> [autoscaling\_trigger\_upper\_breach\_scale\_increment](#input\_autoscaling\_trigger\_upper\_breach\_scale\_increment) | How many Amazon EC2 instances to add when performing a scaling activity | `number` | `1` | no |
 | <a name="input_autoscaling_trigger_upper_threshold"></a> [autoscaling\_trigger\_upper\_threshold](#input\_autoscaling\_trigger\_upper\_threshold) | Maximum level of autoscale metric to add an instance | `number` | `80` | no |
+| <a name="input_autoscaling_updatepolicy_min_instance_in_service"></a> [autoscaling\_updatepolicy\_min\_instance\_in\_service](#input\_autoscaling\_updatepolicy\_min\_instance\_in\_service) | Minimum number of instances in service during update. | `number` | `1` | no |
+| <a name="input_autoscaling_updatepolicy_rolling_update_enabled"></a> [autoscaling\_updatepolicy\_rolling\_update\_enabled](#input\_autoscaling\_updatepolicy\_rolling\_update\_enabled) | Whether to enable rolling update. | `bool` | `true` | no |
+| <a name="input_autoscaling_updatepolicy_rolling_update_type"></a> [autoscaling\_updatepolicy\_rolling\_update\_type](#input\_autoscaling\_updatepolicy\_rolling\_update\_type) | `Health` or `Immutable`. Set it to `Immutable` to apply the configuration change to a fresh group of instances. | `string` | `"Immutable"` | no |
 | <a name="input_cloudwatch_logs_delete_on_terminate"></a> [cloudwatch\_logs\_delete\_on\_terminate](#input\_cloudwatch\_logs\_delete\_on\_terminate) | Whether to delete the log groups when the environment is terminated. If false, the logs are kept RetentionInDays days | `bool` | `true` | no |
 | <a name="input_cloudwatch_logs_health_delete_on_terminate"></a> [cloudwatch\_logs\_health\_delete\_on\_terminate](#input\_cloudwatch\_logs\_health\_delete\_on\_terminate) | Whether to delete the log group when the environment is terminated. If false, the health data is kept RetentionInDays days. | `bool` | `true` | no |
 | <a name="input_cloudwatch_logs_health_health_streaming_enabled"></a> [cloudwatch\_logs\_health\_health\_streaming\_enabled](#input\_cloudwatch\_logs\_health\_health\_streaming\_enabled) | For environments with enhanced health reporting enabled, whether to create a group in CloudWatch Logs for environment health and archive Elastic Beanstalk environment health data. For information about enabling enhanced health, see aws:elasticbeanstalk:healthreporting:system. | `bool` | `true` | no |
 | <a name="input_cloudwatch_logs_health_retention_in_days"></a> [cloudwatch\_logs\_health\_retention\_in\_days](#input\_cloudwatch\_logs\_health\_retention\_in\_days) | The number of days to keep the archived health data before it expires. | `number` | `3` | no |
 | <a name="input_cloudwatch_logs_retention_in_days"></a> [cloudwatch\_logs\_retention\_in\_days](#input\_cloudwatch\_logs\_retention\_in\_days) | The number of days to keep log events before they expire. | `number` | `3` | no |
 | <a name="input_cloudwatch_logs_stream_logs"></a> [cloudwatch\_logs\_stream\_logs](#input\_cloudwatch\_logs\_stream\_logs) | Whether to create groups in CloudWatch Logs for proxy and deployment logs, and stream logs from each instance in your environment | `bool` | `true` | no |
+| <a name="input_command_deployment_policy"></a> [command\_deployment\_policy](#input\_command\_deployment\_policy) | Use the DeploymentPolicy option to set the deployment type. The following values are supported: `AllAtOnce`, `Rolling`, `RollingWithAdditionalBatch`, `Immutable`, `TrafficSplitting`. | `string` | `"Rolling"` | no |
+| <a name="input_command_ignore_health_check"></a> [command\_ignore\_health\_check](#input\_command\_ignore\_health\_check) | Do not cancel a deployment due to failed health checks | `bool` | `true` | no |
+| <a name="input_default_health_check_timeout"></a> [default\_health\_check\_timeout](#input\_default\_health\_check\_timeout) | The amount of time, in seconds, to wait for a response during a health check. Note that this option is only applicable to environments with an application load balancer | `number` | `5` | no |
 | <a name="input_default_listener_enabled"></a> [default\_listener\_enabled](#input\_default\_listener\_enabled) | Set to false to disable the listener. You can use this option to disable the default listener on port 80. | `bool` | `true` | no |
+| <a name="input_default_matcher_http_code"></a> [default\_matcher\_http\_code](#input\_default\_matcher\_http\_code) | List of HTTP codes that indicate that an instance is healthy. Note that this option is only applicable to environments with a network or application load balancer. | `list(string)` | <pre>[<br/>  "200"<br/>]</pre> | no |
 | <a name="input_elb_scheme"></a> [elb\_scheme](#input\_elb\_scheme) | Specify `internal` if you want to create an internal load balancer in your Amazon VPC so that your Elastic Beanstalk application cannot be accessed from outside your Amazon VPC. | `string` | `"public"` | no |
 | <a name="input_environment_application"></a> [environment\_application](#input\_environment\_application) | The name of the application, must be unique within account. | `string` | `"Beanstalk Application"` | no |
 | <a name="input_environment_description"></a> [environment\_description](#input\_environment\_description) | Short description of the environment. | `string` | `"Beanstalk Environment"` | no |
-| <a name="input_environment_loadbalancer_type"></a> [environment\_loadbalancer\_type](#input\_environment\_loadbalancer\_type) | Load Balancer type, e.g. 'application' or 'classic'. | `string` | `"network"` | no |
+| <a name="input_environment_listener_ssl_policy"></a> [environment\_listener\_ssl\_policy](#input\_environment\_listener\_ssl\_policy) | Specify a security policy to apply to the listener. This option is only applicable to environments with an application load balancer. | `string` | `""` | no |
+| <a name="input_environment_loadbalancer_managed_security_group"></a> [environment\_loadbalancer\_managed\_security\_group](#input\_environment\_loadbalancer\_managed\_security\_group) | Load balancer managed security group | `string` | `""` | no |
+| <a name="input_environment_loadbalancer_security_groups"></a> [environment\_loadbalancer\_security\_groups](#input\_environment\_loadbalancer\_security\_groups) | Load balancer security groups | `list(string)` | `[]` | no |
+| <a name="input_environment_loadbalancer_ssl_certificate_id"></a> [environment\_loadbalancer\_ssl\_certificate\_id](#input\_environment\_loadbalancer\_ssl\_certificate\_id) | Load Balancer SSL certificate ARN. The certificate must be present in AWS Certificate Manager | `string` | `""` | no |
+| <a name="input_environment_loadbalancer_type"></a> [environment\_loadbalancer\_type](#input\_environment\_loadbalancer\_type) | Load Balancer type, e.g. 'application' or 'classic'. | `string` | `"classic"` | no |
 | <a name="input_environment_name"></a> [environment\_name](#input\_environment\_name) | A unique name for this Environment. This name is used in the application URL. | `string` | `"Beanstalk-env"` | no |
 | <a name="input_environment_process_default_healthcheck_interval"></a> [environment\_process\_default\_healthcheck\_interval](#input\_environment\_process\_default\_healthcheck\_interval) | The interval of time, in seconds, that Elastic Load Balancing checks the health of the Amazon EC2 instances of your application. | `number` | `10` | no |
 | <a name="input_environment_process_default_healthy_threshold_count"></a> [environment\_process\_default\_healthy\_threshold\_count](#input\_environment\_process\_default\_healthy\_threshold\_count) | The number of consecutive successful requests before Elastic Load Balancing changes the instance health status. | `number` | `3` | no |
@@ -91,8 +104,12 @@ No modules.
 | <a name="input_managedactions_platformupdate_instance_refresh_enabled"></a> [managedactions\_platformupdate\_instance\_refresh\_enabled](#input\_managedactions\_platformupdate\_instance\_refresh\_enabled) | Enable weekly instance replacement. | `bool` | `true` | no |
 | <a name="input_managedactions_platformupdate_update_level"></a> [managedactions\_platformupdate\_update\_level](#input\_managedactions\_platformupdate\_update\_level) | The highest level of update to apply with managed platform updates | `string` | `"minor"` | no |
 | <a name="input_managedactions_preferred_start_time"></a> [managedactions\_preferred\_start\_time](#input\_managedactions\_preferred\_start\_time) | Configure a maintenance window for managed actions in UTC | `string` | `"Sun:10:00"` | no |
-| <a name="input_subnet_availability_zone"></a> [subnet\_availability\_zone](#input\_subnet\_availability\_zone) | AWS availability zone | `string` | `"us-east-1a"` | no |
-| <a name="input_vpc_cidr_block"></a> [vpc\_cidr\_block](#input\_vpc\_cidr\_block) | The CIDR block for the association. | `string` | `"192.168.0.0/24"` | no |
+| <a name="input_subnet_a_availability_zone"></a> [subnet\_a\_availability\_zone](#input\_subnet\_a\_availability\_zone) | AZ for the subnet. | `string` | `"us-east-1a"` | no |
+| <a name="input_subnet_a_cidr_block"></a> [subnet\_a\_cidr\_block](#input\_subnet\_a\_cidr\_block) | The IPv4 CIDR block for the subnet. | `string` | `"10.0.0.0/20"` | no |
+| <a name="input_subnet_b_availability_zone"></a> [subnet\_b\_availability\_zone](#input\_subnet\_b\_availability\_zone) | AZ for the subnet. | `string` | `"us-east-1b"` | no |
+| <a name="input_subnet_b_cidr_block"></a> [subnet\_b\_cidr\_block](#input\_subnet\_b\_cidr\_block) | The IPv4 CIDR block for the subnet. | `string` | `"10.0.16.0/20"` | no |
+| <a name="input_updatepolicy_max_batch_size"></a> [updatepolicy\_max\_batch\_size](#input\_updatepolicy\_max\_batch\_size) | Maximum number of instances to update at once. | `number` | `1` | no |
+| <a name="input_vpc_cidr_block"></a> [vpc\_cidr\_block](#input\_vpc\_cidr\_block) | The CIDR block for the association. | `string` | `"10.0.0.0/16"` | no |
 | <a name="input_vpc_enable_dns_hostnames"></a> [vpc\_enable\_dns\_hostnames](#input\_vpc\_enable\_dns\_hostnames) | Whether or not the VPC has DNS hostname support. | `bool` | `true` | no |
 | <a name="input_vpc_enable_dns_support"></a> [vpc\_enable\_dns\_support](#input\_vpc\_enable\_dns\_support) | Whether or not the VPC has DNS support. | `bool` | `true` | no |
 | <a name="input_vpc_instance_tenancy"></a> [vpc\_instance\_tenancy](#input\_vpc\_instance\_tenancy) | The allowed tenancy of instances launched into the selected VPC. | `string` | `"default"` | no |
@@ -100,7 +117,7 @@ No modules.
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_environment_cname"></a> [environment\_cname](#output\_environment\_cname) | n/a |
 | <a name="output_environment_name"></a> [environment\_name](#output\_environment\_name) | n/a |
 <!-- END_TF_DOCS -->
