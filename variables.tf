@@ -407,5 +407,10 @@ variable "environment_variables" {
   description = "Map of custom ENV variables to be provided to the application."
   type        = map(string)
   default     = {}
-  sensitive   = true
+}
+
+variable "environment_secrets" {
+  description = "Map of ENV variable name => SSM parameter / Secrets Manager ARN, resolved on instance boot."
+  type        = map(string)
+  default     = {}
 }

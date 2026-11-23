@@ -687,4 +687,13 @@ resource "aws_elastic_beanstalk_environment" "environment" {
       value     = setting.value
     }
   }
+  dynamic "setting" {
+    for_each = var.environment_secrets
+    content {
+      namespace = "aws:elasticbeanstalk:application:environmentsecrets"
+      name      = setting.key
+      value     = setting.value
+    }
+  }
+
 }
