@@ -407,4 +407,5 @@ variable "environment_variables" {
   description = "Map of custom ENV variables to be provided to the application."
   type        = map(string)
   default     = {}
+  ephemeral   = true
 }
